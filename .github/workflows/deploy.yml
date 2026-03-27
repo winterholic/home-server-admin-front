@@ -70,5 +70,7 @@ jobs:
           port: ${{ secrets.SERVER_SSH_PORT }}
           script: |
             cd /home/winterholic/projects/services/home-server-admin/frontend
-            docker compose up -d --build --remove-orphans
+            docker compose build --no-cache
+            docker compose up -d --remove-orphans
+            docker image prune -f
             echo "✓ Frontend deployed on port 5005!"
