@@ -4,8 +4,11 @@ import tailwindcss from '@tailwindcss/vite'
 
 const API_TARGET = 'https://homeops-api.winterholic.net'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
+  define: {
+    __API_BASE_URL__: JSON.stringify(command === 'serve' ? '/api' : `${API_TARGET}/api`),
+  },
   server: {
     proxy: {
       '/api': {
@@ -14,4 +17,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

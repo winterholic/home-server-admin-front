@@ -12,8 +12,10 @@ import type {
   DashboardData,
 } from '../types';
 
+declare const __API_BASE_URL__: string;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: __API_BASE_URL__,
   timeout: 15000,
 });
 
