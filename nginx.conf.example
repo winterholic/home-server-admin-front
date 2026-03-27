@@ -1,0 +1,44 @@
+# ============================================================
+# nginx 설정 예시 - home-server-admin
+# 이 파일을 참고해 /etc/nginx/sites-available/home-server-admin 을 만드세요
+# ln -s /etc/nginx/sites-available/home-server-admin /etc/nginx/sites-enabled/
+# ============================================================
+
+server {
+    listen 80;
+    server_name your-domain.com;   # 도메인 또는 서버 IP
+
+    # 프론트엔드 정적 파일 (GitHub Actions가 배포하는 경로)
+    root /var/www/home-server-admin;
+    index index.html;
+
+    # SPA 라우팅 (React Router)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 백엔드 API 프록시 (/api/* → FastAPI)
+    location /api/ {
+        proxy_pass         http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+    }
+
+    # 정적 파일 캐싱
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # 보안 헤더
+    add_header X-Frame-Options       "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+    add_header Referrer-Policy       "strict-origin-when-cross-origin";
+}
+
+# HTTPS 사용 시 certbot이 아래 블록을 자동으로 추가합니다:
+# sudo certbot --nginx -d your-domain.com

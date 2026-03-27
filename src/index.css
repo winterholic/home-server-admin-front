@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #4B7CF3;
+  --color-primary-light: #7AA3F8;
+  --color-accent-mint: #34D399;
+  --color-danger: #F87171;
+  --color-warning: #F59E0B;
+
+  --color-bg-dark: #0D1117;
+  --color-bg-card: #161B27;
+  --color-bg-surface: #1A2030;
+  --color-bg-elevated: #1F2640;
+
+  --color-glass-border: rgba(255, 255, 255, 0.07);
+  --color-glass-bg: rgba(22, 27, 39, 0.85);
+
+  --font-display: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: var(--font-display);
+    background-color: var(--color-bg-dark);
+    color: #e2e8f0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: var(--color-glass-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--color-glass-border);
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.25);
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 12px rgba(75, 124, 243, 0.2);
+  }
+
+  .neon-glow-green {
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.2);
+  }
+
+  .neon-glow-red {
+    box-shadow: 0 0 10px rgba(248, 113, 113, 0.15);
+  }
+
+  .neon-glow-mint {
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.15);
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(75, 124, 243, 0.2);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(75, 124, 243, 0.35);
+  }
+}

@@ -1,0 +1,7 @@
+services:
+  home-server-admin-frontend:
+    build: .
+    container_name: home-server-admin-frontend
+    restart: unless-stopped
+    ports:
+      - "5005:80"

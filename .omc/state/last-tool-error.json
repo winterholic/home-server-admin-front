@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"F:/mydevelop/home-server-admin/home-server-admin-front\\\" && npm run build 2>&1\",\"timeout\":60000}",
+  "error": "Exit code 2\n\n> home-server-admin-front@0.0.0 build\n> tsc -b && vite build\n\nsrc/api/mockData.ts(8,3): error TS2739: Type '{ total: number; used: number; percent: number; swap_used: number; }' is missing the following properties from type '{ total: number; used: number; available: number; percent: number; swap_total: number; swap_used: number; }': available, swap_total\r\nsrc/api/mockData.ts(15,5): error TS2739: Type '{ mountpoint: string; device: string; total: number; used: number; percent: number...",
+  "timestamp": "2026-03-27T11:11:03.983Z",
+  "retry_count": 1
+}

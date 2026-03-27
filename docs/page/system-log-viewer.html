@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>System Log Viewer &amp; Analytics</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#00f2ff",
+            "accent-mint": "#00ffcc",
+            "danger": "#ff4d4d",
+            "warning": "#ffaa00",
+            "background-light": "#f5f8f8",
+            "background-dark": "#0f2223",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          },
+          borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+  <style>
+    .glass-panel {
+      background: rgba(15, 34, 35, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 242, 255, 0.1);
+    }
+    .sidebar-item-active {
+      background: rgba(0, 242, 255, 0.1);
+      border-left: 3px solid #00f2ff;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0, 242, 255, 0.05);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(0, 242, 255, 0.2);
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 242, 255, 0.4);
+    }
+    .glow-red {
+      box-shadow: 0 0 15px rgba(255, 77, 77, 0.15);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex overflow-hidden">
+<!-- Left Navigation/Filter Sidebar -->
+<aside class="w-72 glass-panel border-r border-primary/20 flex flex-col h-screen sticky top-0">
+  <div class="p-6 flex items-center gap-3 border-b border-primary/10">
+    <div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+      <span class="material-icons text-primary">terminal</span>
+    </div>
+    <div>
+      <h1 class="font-bold text-lg tracking-tight">LOG<span class="text-primary">SENTRY</span></h1>
+      <p class="text-[10px] uppercase tracking-widest text-primary/60 font-semibold">Home Server v4.2</p>
+    </div>
+  </div>
+  <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+    <!-- Search -->
+    <div class="relative">
+      <span class="material-icons absolute left-3 top-2.5 text-slate-500 text-sm">search</span>
+      <input class="w-full bg-primary/5 border border-primary/20 rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none text-slate-200" placeholder="Search logs..." type="text"/>
+    </div>
+    <!-- Categories -->
+    <div>
+      <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Event Types</h3>
+      <div class="space-y-3">
+        <label class="flex items-center group cursor-pointer">
+          <input checked="" class="rounded border-primary/30 bg-background-dark text-primary focus:ring-primary/50 transition" type="checkbox"/>
+          <span class="ml-3 text-sm text-slate-300 group-hover:text-primary transition">Brute Force Detections</span>
+        </label>
+        <label class="flex items-center group cursor-pointer">
+          <input checked="" class="rounded border-primary/30 bg-background-dark text-primary focus:ring-primary/50 transition" type="checkbox"/>
+          <span class="ml-3 text-sm text-slate-300 group-hover:text-primary transition">System Errors</span>
+        </label>
+        <label class="flex items-center group cursor-pointer">
+          <input class="rounded border-primary/30 bg-background-dark text-primary focus:ring-primary/50 transition" type="checkbox"/>
+          <span class="ml-3 text-sm text-slate-300 group-hover:text-primary transition">Auth Success</span>
+        </label>
+        <label class="flex items-center group cursor-pointer">
+          <input checked="" class="rounded border-primary/30 bg-background-dark text-primary focus:ring-primary/50 transition" type="checkbox"/>
+          <span class="ml-3 text-sm text-slate-300 group-hover:text-primary transition">Network Traffic</span>
+        </label>
+        <label class="flex items-center group cursor-pointer">
+          <input class="rounded border-primary/30 bg-background-dark text-primary focus:ring-primary/50 transition" type="checkbox"/>
+          <span class="ml-3 text-sm text-slate-300 group-hover:text-primary transition">App Deployment</span>
+        </label>
+      </div>
+    </div>
+    <!-- Severity -->
+    <div>
+      <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Severity Levels</h3>
+      <div class="space-y-3">
+        <label class="flex items-center group cursor-pointer">
+          <div class="w-3 h-3 rounded-full bg-danger mr-3"></div>
+          <input checked="" class="hidden" type="checkbox"/>
+          <span class="text-sm text-slate-300 group-hover:text-white transition font-medium">Critical</span>
+        </label>
+        <label class="flex items-center group cursor-pointer">
+          <div class="w-3 h-3 rounded-full bg-warning mr-3"></div>
+          <input checked="" class="hidden" type="checkbox"/>
+          <span class="text-sm text-slate-300 group-hover:text-white transition font-medium">Warning</span>
+        </label>
+        <label class="flex items-center group cursor-pointer">
+          <div class="w-3 h-3 rounded-full bg-primary mr-3"></div>
+          <input checked="" class="hidden" type="checkbox"/>
+          <span class="text-sm text-slate-300 group-hover:text-white transition font-medium">Info</span>
+        </label>
+      </div>
+    </div>
+    <!-- Quick Filter Stats -->
+    <div class="pt-6 border-t border-primary/10">
+      <div class="bg-primary/5 p-4 rounded-xl border border-primary/10">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-slate-400">Total Logs</span>
+          <span class="text-xs font-bold text-primary tracking-tighter">14,281</span>
+        </div>
+        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div class="bg-primary h-full w-2/3"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="p-6 border-t border-primary/10">
+    <button class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 transition text-sm font-semibold">
+      <span class="material-icons text-sm">download</span>
+      Export Report
+    </button>
+  </div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto custom-scrollbar bg-background-dark relative">
+  <!-- Floating Header -->
+  <header class="sticky top-0 z-10 px-8 py-4 glass-panel border-b border-primary/10 flex items-center justify-between">
+    <div class="flex items-center gap-6">
+      <h2 class="text-xl font-semibold">Log Dashboard</h2>
+      <div class="flex items-center gap-2 px-3 py-1 bg-accent-mint/10 border border-accent-mint/30 rounded-full">
+        <span class="w-2 h-2 rounded-full bg-accent-mint animate-pulse"></span>
+        <span class="text-[10px] font-bold text-accent-mint uppercase tracking-wider">Live Monitoring</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="flex bg-primary/5 rounded-lg p-1 border border-primary/10">
+        <button class="px-4 py-1.5 text-xs font-semibold rounded-md bg-primary text-background-dark">1h</button>
+        <button class="px-4 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:text-white">6h</button>
+        <button class="px-4 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:text-white">24h</button>
+        <button class="px-4 py-1.5 text-xs font-semibold rounded-md text-slate-400 hover:text-white">7d</button>
+      </div>
+      <button class="p-2 rounded-lg bg-primary/5 border border-primary/20 text-primary hover:bg-primary/10">
+        <span class="material-icons">settings</span>
+      </button>
+    </div>
+  </header>
+  <div class="p-8 space-y-8">
+    <!-- Timeline Chart Section -->
+    <section class="glass-panel p-6 rounded-2xl relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 via-accent-mint/50 to-primary/50"></div>
+      <div class="flex items-end justify-between mb-8">
+        <div>
+          <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Event Frequency</h3>
+          <p class="text-2xl font-bold">1.2k <span class="text-xs font-normal text-slate-500">events / min</span></p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-primary"></span>
+            <span class="text-xs text-slate-400 font-medium">System</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-danger"></span>
+            <span class="text-xs text-slate-400 font-medium">Errors</span>
+          </div>
+        </div>
+      </div>
+      <!-- SVG Chart Mockup -->
+      <div class="w-full h-48 relative">
+        <svg class="w-full h-full drop-shadow-[0_0_10px_rgba(0,242,255,0.3)]" preserveaspectratio="none" viewbox="0 0 1000 200">
+          <!-- Grid Lines -->
+          <line stroke="rgba(0,242,255,0.05)" stroke-width="1" x1="0" x2="1000" y1="50" y2="50"></line>
+          <line stroke="rgba(0,242,255,0.05)" stroke-width="1" x1="0" x2="1000" y1="100" y2="100"></line>
+          <line stroke="rgba(0,242,255,0.05)" stroke-width="1" x1="0" x2="1000" y1="150" y2="150"></line>
+          <!-- Main Path -->
+          <path d="M0 180 Q 50 160, 100 170 T 200 130 T 300 150 T 400 110 T 500 120 T 600 80 T 700 90 T 800 40 T 900 60 T 1000 50" fill="none" stroke="#00f2ff" stroke-linecap="round" stroke-width="3"></path>
+          <path d="M0 180 Q 50 160, 100 170 T 200 130 T 300 150 T 400 110 T 500 120 T 600 80 T 700 90 T 800 40 T 900 60 T 1000 50 L 1000 200 L 0 200 Z" fill="url(#gradient)" opacity="0.1"></path>
+          <!-- Error Spikes -->
+          <path d="M300 150 L 310 100 L 320 150" fill="none" stroke="#ff4d4d" stroke-width="2"></path>
+          <path d="M780 90 L 790 30 L 800 40" fill="none" stroke="#ff4d4d" stroke-width="2"></path>
+          <defs>
+            <lineargradient id="gradient" x1="0%" x2="0%" y1="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#00f2ff;stop-opacity:1"></stop>
+              <stop offset="100%" style="stop-color:#00f2ff;stop-opacity:0"></stop>
+            </lineargradient>
+          </defs>
+        </svg>
+        <!-- Floating Data Tooltip -->
+        <div class="absolute top-10 left-[78%] glass-panel border-primary/30 p-2 rounded-lg text-[10px] pointer-events-none">
+          <div class="font-bold text-primary">Peak Detected</div>
+          <div class="text-slate-400">03:42:15 AM</div>
+        </div>
+      </div>
+    </section>
+    <!-- Log Table -->
+    <section class="glass-panel rounded-2xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-primary/5 text-slate-400 text-xs font-bold uppercase tracking-widest border-b border-primary/10">
+          <tr>
+            <th class="px-6 py-4">Timestamp</th>
+            <th class="px-6 py-4">Source</th>
+            <th class="px-6 py-4">Severity</th>
+            <th class="px-6 py-4">Message</th>
+            <th class="px-6 py-4 text-right">Action</th>
+          </tr>
+          </thead>
+          <tbody class="divide-y divide-primary/5">
+          <!-- Brute Force Log (High Priority) -->
+          <tr class="bg-danger/5 hover:bg-danger/10 transition group glow-red">
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-slate-400">2023-11-24 14:32:01</td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-primary">auth-gateway</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 rounded text-[10px] font-bold bg-danger text-white uppercase tracking-tighter">Critical</span>
+            </td>
+            <td class="px-6 py-4 font-mono text-sm text-slate-200">
+              <span class="text-danger font-bold">[BruteForce]</span> Multiple failed login attempts for user 'admin' from IP 192.168.1.104
+            </td>
+            <td class="px-6 py-4 text-right">
+              <button class="bg-danger text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-danger/80 transition uppercase tracking-wider">Block IP</button>
+            </td>
+          </tr>
+          <!-- Info Log -->
+          <tr class="hover:bg-primary/5 transition group">
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-slate-400">2023-11-24 14:31:55</td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-primary">sys-monitor</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 rounded text-[10px] font-bold bg-primary/20 text-primary uppercase tracking-tighter">Info</span>
+            </td>
+            <td class="px-6 py-4 font-mono text-sm text-slate-300">
+              CPU temperature normalized at 42°C. Power supply voltage stable.
+            </td>
+            <td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition">
+              <button class="text-slate-400 hover:text-white"><span class="material-icons text-sm">visibility</span></button>
+            </td>
+          </tr>
+          <!-- Warning Log -->
+          <tr class="hover:bg-primary/5 transition group">
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-slate-400">2023-11-24 14:31:40</td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-primary">db-service</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 rounded text-[10px] font-bold bg-warning text-background-dark uppercase tracking-tighter">Warning</span>
+            </td>
+            <td class="px-6 py-4 font-mono text-sm text-slate-300">
+              Query execution time exceeded threshold: 2400ms. [SELECT * FROM telemetry WHERE...]
+            </td>
+            <td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition">
+              <button class="text-slate-400 hover:text-white"><span class="material-icons text-sm">more_vert</span></button>
+            </td>
+          </tr>
+          <!-- Brute Force Log (Another one) -->
+          <tr class="bg-danger/5 hover:bg-danger/10 transition group glow-red">
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-slate-400">2023-11-24 14:30:12</td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-primary">auth-gateway</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 rounded text-[10px] font-bold bg-danger text-white uppercase tracking-tighter">Critical</span>
+            </td>
+            <td class="px-6 py-4 font-mono text-sm text-slate-200">
+              <span class="text-danger font-bold">[BruteForce]</span> Login attempt frequency limit exceeded for IP 45.2.19.122
+            </td>
+            <td class="px-6 py-4 text-right">
+              <button class="bg-danger text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-danger/80 transition uppercase tracking-wider">Block IP</button>
+            </td>
+          </tr>
+          <!-- More standard logs -->
+          <tr class="hover:bg-primary/5 transition group">
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-slate-400">2023-11-24 14:28:44</td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-primary">app-docker</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 rounded text-[10px] font-bold bg-primary/20 text-primary uppercase tracking-tighter">Info</span>
+            </td>
+            <td class="px-6 py-4 font-mono text-sm text-slate-300">
+              Container 'grafana-instance' health check passed. Status: Running.
+            </td>
+            <td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition">
+              <button class="text-slate-400 hover:text-white"><span class="material-icons text-sm">visibility</span></button>
+            </td>
+          </tr>
+          <tr class="hover:bg-primary/5 transition group">
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-slate-400">2023-11-24 14:25:31</td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-primary">net-traffic</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 rounded text-[10px] font-bold bg-primary/20 text-primary uppercase tracking-tighter">Info</span>
+            </td>
+            <td class="px-6 py-4 font-mono text-sm text-slate-300">
+              Inbound traffic surge detected: 450Mbps on eth0 interface.
+            </td>
+            <td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition">
+              <button class="text-slate-400 hover:text-white"><span class="material-icons text-sm">visibility</span></button>
+            </td>
+          </tr>
+          <tr class="hover:bg-primary/5 transition group">
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-slate-400">2023-11-24 14:22:10</td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-primary">sys-scheduler</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 rounded text-[10px] font-bold bg-primary/20 text-primary uppercase tracking-tighter">Info</span>
+            </td>
+            <td class="px-6 py-4 font-mono text-sm text-slate-300">
+              Scheduled backup job 'DAILY_OFFSITE' completed successfully in 12m 4s.
+            </td>
+            <td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition">
+              <button class="text-slate-400 hover:text-white"><span class="material-icons text-sm">visibility</span></button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination/Load More -->
+      <div class="p-6 flex items-center justify-between border-t border-primary/10 bg-primary/5">
+        <p class="text-xs text-slate-500 italic">Showing 1-25 of 14.2k events</p>
+        <div class="flex items-center gap-2">
+          <button class="p-1 rounded bg-background-dark border border-primary/10 text-slate-500 hover:text-primary"><span class="material-icons">chevron_left</span></button>
+          <button class="px-3 py-1 rounded bg-primary/20 border border-primary text-primary text-xs font-bold">1</button>
+          <button class="px-3 py-1 rounded hover:bg-primary/10 text-slate-400 text-xs font-bold">2</button>
+          <button class="px-3 py-1 rounded hover:bg-primary/10 text-slate-400 text-xs font-bold">3</button>
+          <button class="p-1 rounded bg-background-dark border border-primary/10 text-slate-500 hover:text-primary"><span class="material-icons">chevron_right</span></button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+<!-- Right Quick-Stats (Optional but adds density) -->
+<aside class="w-20 glass-panel border-l border-primary/20 flex flex-col items-center py-8 gap-10">
+  <div class="flex flex-col items-center gap-1 group cursor-help">
+    <div class="w-12 h-12 rounded-full border-2 border-primary/30 flex items-center justify-center relative">
+      <span class="material-icons text-primary">memory</span>
+      <div class="absolute inset-0 border-t-2 border-primary rounded-full animate-[spin_3s_linear_infinite]"></div>
+    </div>
+    <span class="text-[10px] font-bold text-slate-500 group-hover:text-primary">RAM</span>
+  </div>
+  <div class="flex flex-col items-center gap-1 group cursor-help">
+    <div class="w-12 h-12 rounded-full border-2 border-accent-mint/30 flex items-center justify-center relative">
+      <span class="material-icons text-accent-mint">dns</span>
+      <div class="absolute inset-0 border-r-2 border-accent-mint rounded-full"></div>
+    </div>
+    <span class="text-[10px] font-bold text-slate-500 group-hover:text-accent-mint">DISK</span>
+  </div>
+  <div class="flex flex-col items-center gap-1 group cursor-help">
+    <div class="w-12 h-12 rounded-full border-2 border-danger/30 flex items-center justify-center relative">
+      <span class="material-icons text-danger">router</span>
+      <div class="absolute inset-0 border-b-2 border-danger rounded-full animate-pulse"></div>
+    </div>
+    <span class="text-[10px] font-bold text-slate-500 group-hover:text-danger">NET</span>
+  </div>
+  <div class="mt-auto">
+    <button class="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400">
+      <span class="material-icons">help_outline</span>
+    </button>
+  </div>
+</aside>
+</body></html>
