@@ -13,17 +13,8 @@ import type {
 } from '../types';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 15000,
-});
-
-// nginx의 try_files가 /api/* 요청에 index.html(200)을 반환하는 경우를 에러로 처리
-api.interceptors.response.use((response) => {
-  const contentType = response.headers['content-type'] ?? '';
-  if (contentType.includes('text/html')) {
-    return Promise.reject(new Error('API 서버에 연결할 수 없습니다'));
-  }
-  return response;
 });
 
 // ── Dashboard ─────────────────────────────────────────────
