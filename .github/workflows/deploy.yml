@@ -14,6 +14,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Remove .git for deployment
+        run: rm -rf .git
+
       - name: Copy files to server
         uses: appleboy/scp-action@v0.1.7
         with:
