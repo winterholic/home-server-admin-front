@@ -39,6 +39,21 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 function AppRoutes() {
+  const { initialized } = useAuth();
+
+  // Refresh token 검증이 완료될 때까지 로딩 표시
+  // (인증된 사용자가 새로고침 시 로그인 페이지가 잠깐 보이는 현상 방지)
+  if (!initialized) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center bg-bg-dark">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <span className="text-slate-500 text-xs">연결 중...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

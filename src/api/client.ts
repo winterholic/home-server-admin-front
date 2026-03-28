@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
+import { getToken, setToken } from './tokenStore';
 import type {
   SystemStatus,
   ServiceListResponse,
@@ -15,38 +16,63 @@ import type {
 
 declare const __API_BASE_URL__: string;
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: __API_BASE_URL__,
   timeout: 15000,
+  withCredentials: true, // Always include cookies (refresh token)
 });
 
-// Attach JWT token to every request
+// ── Refresh token de-duplication ──────────────────────────────────────────────
+// Multiple simultaneous 401s share one refresh request instead of racing.
+let _refreshPromise: Promise<string> | null = null;
+
+async function doRefresh(): Promise<string> {
+  const res = await api.post<{ access_token: string; username: string }>('/auth/refresh');
+  setToken(res.data.access_token);
+  return res.data.access_token;
+}
+
+// ── Request interceptor: attach access token ──────────────────────────────────
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('nodectrl_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// On 401, clear token and redirect to login
+// ── Response interceptor: silent token refresh on 401 ────────────────────────
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('nodectrl_token');
-      localStorage.removeItem('nodectrl_user');
-      window.location.href = '/login';
+  async (err) => {
+    const original = err.config as AxiosRequestConfig & { _retry?: boolean };
+    const isAuthEndpoint = (original.url ?? '').includes('/auth/');
+
+    // Retry once on 401, but not for auth endpoints (avoids infinite loops)
+    if (err.response?.status === 401 && !original._retry && !isAuthEndpoint) {
+      original._retry = true;
+      try {
+        if (!_refreshPromise) {
+          _refreshPromise = doRefresh().finally(() => {
+            _refreshPromise = null;
+          });
+        }
+        const newToken = await _refreshPromise;
+        if (original.headers) original.headers.Authorization = `Bearer ${newToken}`;
+        return api(original);
+      } catch {
+        // Refresh failed — clear token and send to login
+        setToken(null);
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(err);
   },
 );
 
-// ── Dashboard ─────────────────────────────────────────────
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 export const fetchDashboard = () =>
   api.get<DashboardData>('/dashboard').then((r) => r.data);
 
-// ── System ────────────────────────────────────────────────
+// ── System ────────────────────────────────────────────────────────────────────
 export const fetchSystemStatus = () =>
   api.get<SystemStatus>('/system/status').then((r) => r.data);
 
@@ -56,17 +82,19 @@ export const fetchSystemHistory = (period: '1h' | '24h' | '7d' | '30d') =>
     .then((r) => r.data);
 
 export const fetchSystemInfo = () =>
-  api.get<{
-    hostname: string;
-    os: string;
-    architecture: string;
-    processor: string;
-    cpu_count_logical: number;
-    total_memory: number;
-    boot_time: number;
-  }>('/system/info').then((r) => r.data);
+  api
+    .get<{
+      hostname: string;
+      os: string;
+      architecture: string;
+      processor: string;
+      cpu_count_logical: number;
+      total_memory: number;
+      boot_time: number;
+    }>('/system/info')
+    .then((r) => r.data);
 
-// ── Services ──────────────────────────────────────────────
+// ── Services ──────────────────────────────────────────────────────────────────
 export const fetchServices = () =>
   api.get<ServiceListResponse>('/services').then((r) => r.data);
 
@@ -89,7 +117,7 @@ export const fetchServiceLogs = (name: string, lines = 50, service_type?: string
     })
     .then((r) => r.data);
 
-// ── Logs ──────────────────────────────────────────────────
+// ── Logs ──────────────────────────────────────────────────────────────────────
 export const fetchLogs = (params: {
   source?: string;
   severity?: string;
@@ -98,10 +126,9 @@ export const fetchLogs = (params: {
   offset?: number;
 }) =>
   api
-    .get<{ logs: LogEntry[]; total: number; limit: number; offset: number }>(
-      '/logs/recent',
-      { params },
-    )
+    .get<{ logs: LogEntry[]; total: number; limit: number; offset: number }>('/logs/recent', {
+      params,
+    })
     .then((r) => r.data);
 
 export const fetchLogStatistics = (period: string = '24h') =>
@@ -114,15 +141,14 @@ export const fetchLogTimeline = (period: string = '24h') =>
     .get<{ timeline: TimelineBucket[] }>('/logs/timeline', { params: { period } })
     .then((r) => r.data);
 
-// ── Alerts ────────────────────────────────────────────────
+// ── Alerts ────────────────────────────────────────────────────────────────────
 export const fetchAlertSettings = () =>
   api.get<{ settings: AlertSetting[] }>('/alerts/settings').then((r) => r.data);
 
 export const updateAlertSetting = (
   id: number,
   data: { threshold?: number; enabled?: boolean; email_recipients?: string[] },
-) =>
-  api.put<AlertSetting>(`/alerts/settings/${id}`, data).then((r) => r.data);
+) => api.put<AlertSetting>(`/alerts/settings/${id}`, data).then((r) => r.data);
 
 export const fetchAlertHistory = (limit = 50, offset = 0) =>
   api
@@ -131,7 +157,7 @@ export const fetchAlertHistory = (limit = 50, offset = 0) =>
     })
     .then((r) => r.data);
 
-// ── App Settings ──────────────────────────────────────────
+// ── App Settings ──────────────────────────────────────────────────────────────
 export const fetchAppSettings = () =>
   api.get<AppSettings>('/settings').then((r) => r.data);
 
@@ -169,7 +195,7 @@ export const fetchAccessIps = (hours = 24, limit = 100) =>
     .get<AccessIpsResponse>('/logs/access-ips', { params: { hours, limit } })
     .then((r) => r.data);
 
-// ── Auth ──────────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────────────────
 export const loginApi = (username: string, password: string) => {
   const body = new URLSearchParams({ username, password });
   return api
