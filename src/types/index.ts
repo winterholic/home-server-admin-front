@@ -30,6 +30,8 @@ export interface DiskPartition {
   used: number;
   free: number;
   percent: number;
+  disk_type: 'ssd' | 'hdd' | 'unknown';
+  label: string;
 }
 
 export interface ServiceInfo {

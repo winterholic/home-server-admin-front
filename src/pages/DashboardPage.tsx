@@ -163,34 +163,46 @@ export default function DashboardPage() {
         </GlassCard>
 
         {/* 디스크 */}
-        <GlassCard hover className="p-6 flex items-center gap-5">
-          <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
-            <svg className="w-full h-full -rotate-90">
-              <circle cx="32" cy="32" r="28" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
-              <circle
-                cx="32"
-                cy="32"
-                r="28"
-                fill="transparent"
-                stroke="#4B7CF3"
-                strokeWidth="4"
-                strokeDasharray={175}
-                strokeDashoffset={175 - (175 * (sys.disk[0]?.percent ?? 0)) / 100}
-                strokeLinecap="round"
-              />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xs font-mono font-bold">
-              {sys.disk[0]?.percent ?? 0}%
-            </span>
+        <GlassCard hover className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">디스크 상태</p>
+            <div className="p-1.5 bg-emerald-500/10 rounded-lg">
+              <HardDrive className="w-4 h-4 text-emerald-400" />
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">디스크 상태</p>
-            <h3 className="text-lg font-mono font-bold text-white truncate">
-              {formatBytes(sys.disk[0]?.used ?? 0)} <span className="text-slate-500 text-xs">사용</span>
-            </h3>
-            <p className="text-[10px] text-green-400 flex items-center gap-1 mt-1">
-              <HardDrive className="w-3 h-3" /> {sys.disk[0]?.device ?? 'Disk'}
-            </p>
+          <div className="space-y-3">
+            {(sys.disk.length > 0 ? sys.disk : [{ percent: 0, used: 0, total: 0, device: 'disk', disk_type: 'unknown', label: 'Disk', mountpoint: '/', fstype: '', free: 0 }]).map((disk, i) => (
+              <div key={i}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      disk.disk_type === 'ssd'
+                        ? 'bg-primary/15 text-primary'
+                        : disk.disk_type === 'hdd'
+                          ? 'bg-amber-500/15 text-amber-400'
+                          : 'bg-white/10 text-slate-400'
+                    }`}>
+                      {disk.disk_type === 'ssd' ? 'SSD' : disk.disk_type === 'hdd' ? 'HDD' : 'DISK'}
+                    </span>
+                    <span className="text-xs text-slate-300 truncate max-w-[80px]" title={disk.label}>
+                      {disk.label || disk.device}
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono text-white">{disk.percent.toFixed(1)}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      disk.percent >= 90 ? 'bg-red-500' : disk.percent >= 70 ? 'bg-amber-500' : 'bg-primary'
+                    }`}
+                    style={{ width: `${disk.percent}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {formatBytes(disk.used)} / {formatBytes(disk.total)}
+                </p>
+              </div>
+            ))}
           </div>
         </GlassCard>
 
