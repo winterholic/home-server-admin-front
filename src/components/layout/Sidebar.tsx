@@ -1,5 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Activity, Layers, FileText, Settings, LogOut, Server } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '대시보드' },
@@ -10,6 +11,14 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  const { logout, username } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <aside className="w-20 lg:w-60 flex-shrink-0 bg-bg-dark border-r border-white/[0.06] flex flex-col h-screen sticky top-0">
       <div className="p-4 lg:p-5 flex items-center gap-3 border-b border-white/[0.06]">
@@ -43,13 +52,13 @@ export default function Sidebar() {
 
       <div className="p-2 lg:p-3 mt-auto space-y-3 border-t border-white/[0.06]">
         <div className="hidden lg:block px-3 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mb-1.5">시스템 상태</p>
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-            <span className="text-xs text-emerald-400 font-medium">정상 운영 중</span>
-          </div>
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mb-1.5">로그인 계정</p>
+          <p className="text-xs text-slate-300 font-medium truncate">{username}</p>
         </div>
-        <button className="w-full flex items-center justify-center lg:justify-start gap-3 p-2.5 text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-white/[0.04]">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center lg:justify-start gap-3 p-2.5 text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-white/[0.04]"
+        >
           <LogOut className="w-4 h-4" />
           <span className="hidden lg:block font-medium text-sm">로그아웃</span>
         </button>

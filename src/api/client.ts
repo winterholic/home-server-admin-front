@@ -20,6 +20,28 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Attach JWT token to every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('nodectrl_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// On 401, clear token and redirect to login
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('nodectrl_token');
+      localStorage.removeItem('nodectrl_user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(err);
+  },
+);
+
 // ── Dashboard ─────────────────────────────────────────────
 export const fetchDashboard = () =>
   api.get<DashboardData>('/dashboard').then((r) => r.data);
@@ -146,3 +168,15 @@ export const fetchAccessIps = (hours = 24, limit = 100) =>
   api
     .get<AccessIpsResponse>('/logs/access-ips', { params: { hours, limit } })
     .then((r) => r.data);
+
+// ── Auth ──────────────────────────────────────────────────
+export const loginApi = (username: string, password: string) => {
+  const body = new URLSearchParams({ username, password });
+  return api
+    .post<{ access_token: string; token_type: string; username: string }>(
+      '/auth/login',
+      body,
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+    )
+    .then((r) => r.data);
+};
