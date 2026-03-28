@@ -39,11 +39,23 @@ export default function DashboardPage() {
     setError(null);
     const load = async () => {
       try {
-        const [dash, svcResp] = await Promise.all([fetchDashboard(), fetchServices()]);
+        const [dashResult, svcResult] = await Promise.allSettled([
+          fetchDashboard(),
+          fetchServices(),
+        ]);
         if (!active) return;
-        setDashData(dash);
-        setServices(svcResp.services);
-        setError(null);
+        if (dashResult.status === 'fulfilled') {
+          setDashData(dashResult.value);
+          setError(null);
+        } else {
+          console.error('Dashboard load failed:', dashResult.reason);
+          setError('서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.');
+        }
+        if (svcResult.status === 'fulfilled') {
+          setServices(svcResult.value.services);
+        } else {
+          console.warn('Services load failed (non-critical):', svcResult.reason);
+        }
       } catch (e) {
         console.error('Dashboard load failed:', e);
         if (active) setError('서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.');

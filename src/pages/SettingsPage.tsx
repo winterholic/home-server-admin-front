@@ -5,7 +5,7 @@ import {
   fetchAlertSettings,
   updateAlertSetting,
   fetchAppSettings,
-  updateSmtpSettings,
+  updateEmailRecipient,
   updateMonitoringSettings,
   testSmtpConnection,
 } from '../api/client';
@@ -27,15 +27,6 @@ const metricLabels: Record<string, { title: string; desc: string }> = {
   network: { title: '트래픽 급증', desc: '잠재적 침해를 나타내는 비정상적인 아웃바운드 트래픽 패턴을 감지합니다.' },
 };
 
-interface EmailConfig {
-  smtpHost: string;
-  smtpPort: string;
-  smtpUser: string;
-  smtpPassword: string;
-  sender: string;
-  useTls: boolean;
-}
-
 interface MonitorConfig {
   collectInterval: number;
   retentionDays: number;
@@ -44,14 +35,7 @@ interface MonitorConfig {
 export default function SettingsPage() {
   const [tab, setTab] = useState<SettingsTab>('alerts');
   const [alertSettings, setAlertSettings] = useState<AlertSetting[]>([]);
-  const [emailConfig, setEmailConfig] = useState<EmailConfig>({
-    smtpHost: '',
-    smtpPort: '587',
-    smtpUser: '',
-    smtpPassword: '',
-    sender: '',
-    useTls: true,
-  });
+  const [emailRecipient, setEmailRecipient] = useState('');
   const [monitorConfig, setMonitorConfig] = useState<MonitorConfig>({
     collectInterval: 5,
     retentionDays: 30,
@@ -78,14 +62,7 @@ export default function SettingsPage() {
   }, []);
 
   const applyAppSettings = (app: AppSettings) => {
-    setEmailConfig({
-      smtpHost: app.smtp_host ?? '',
-      smtpPort: String(app.smtp_port ?? 587),
-      smtpUser: app.smtp_user ?? '',
-      smtpPassword: '',
-      sender: app.smtp_from ?? '',
-      useTls: app.smtp_tls ?? true,
-    });
+    setEmailRecipient(app.email_recipient ?? '');
     setMonitorConfig({
       collectInterval: Math.round((app.monitor_interval ?? 300) / 60),
       retentionDays: app.data_retention_days ?? 30,
@@ -110,14 +87,7 @@ export default function SettingsPage() {
           )
         );
       } else if (tab === 'email') {
-        await updateSmtpSettings({
-          smtp_host: emailConfig.smtpHost,
-          smtp_port: Number(emailConfig.smtpPort),
-          smtp_user: emailConfig.smtpUser || undefined,
-          smtp_password: emailConfig.smtpPassword || undefined,
-          smtp_from: emailConfig.sender,
-          smtp_tls: emailConfig.useTls,
-        });
+        await updateEmailRecipient(emailRecipient);
       } else if (tab === 'monitoring') {
         await updateMonitoringSettings({
           monitor_interval: monitorConfig.collectInterval * 60,
@@ -152,14 +122,7 @@ export default function SettingsPage() {
     setTestLoading(true);
     setTestResult(null);
     try {
-      const result = await testSmtpConnection({
-        smtp_host: emailConfig.smtpHost,
-        smtp_port: Number(emailConfig.smtpPort),
-        smtp_user: emailConfig.smtpUser || undefined,
-        smtp_password: emailConfig.smtpPassword || undefined,
-        smtp_from: emailConfig.sender,
-        smtp_tls: emailConfig.useTls,
-      });
+      const result = await testSmtpConnection({});
       setTestResult(result);
     } catch (e: any) {
       setTestResult({ success: false, message: e?.message ?? '요청 실패' });
@@ -283,77 +246,40 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* 이메일 탭 */}
+        {/* 이메일 탭 - 수신자만 설정 */}
         {tab === 'email' && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2">이메일 설정</h2>
-              <p className="text-slate-400">알림 발송을 위한 SMTP 서버를 설정합니다.</p>
+              <h2 className="text-3xl font-bold mb-2">이메일 알림 설정</h2>
+              <p className="text-slate-400">알림을 수신할 이메일 주소를 설정합니다. SMTP 설정은 서버 환경 변수로 관리됩니다.</p>
             </div>
             <GlassCard className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">SMTP 호스트</label>
-                  <input
-                    value={emailConfig.smtpHost}
-                    onChange={(e) => setEmailConfig({ ...emailConfig, smtpHost: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 focus:ring-1 focus:ring-primary focus:border-primary text-slate-200 text-sm outline-none"
-                    placeholder="smtp.gmail.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">SMTP 포트</label>
-                  <input
-                    value={emailConfig.smtpPort}
-                    onChange={(e) => setEmailConfig({ ...emailConfig, smtpPort: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 focus:ring-1 focus:ring-primary focus:border-primary text-slate-200 text-sm outline-none"
-                    placeholder="587"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">SMTP 사용자명</label>
-                  <input
-                    value={emailConfig.smtpUser}
-                    onChange={(e) => setEmailConfig({ ...emailConfig, smtpUser: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 focus:ring-1 focus:ring-primary focus:border-primary text-slate-200 text-sm outline-none"
-                    placeholder="user@gmail.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">SMTP 비밀번호</label>
-                  <input
-                    type="password"
-                    value={emailConfig.smtpPassword}
-                    onChange={(e) => setEmailConfig({ ...emailConfig, smtpPassword: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 focus:ring-1 focus:ring-primary focus:border-primary text-slate-200 text-sm outline-none"
-                    placeholder="앱 비밀번호"
-                  />
-                </div>
-              </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">발신자 이메일</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <Mail className="w-4 h-4 inline mr-2 text-primary" />
+                  알림 수신 이메일
+                </label>
                 <input
-                  value={emailConfig.sender}
-                  onChange={(e) => setEmailConfig({ ...emailConfig, sender: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-4 focus:ring-1 focus:ring-primary focus:border-primary text-slate-200 text-sm outline-none"
-                  placeholder="alerts@homeserver.dev"
+                  type="email"
+                  value={emailRecipient}
+                  onChange={(e) => setEmailRecipient(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 focus:ring-1 focus:ring-primary focus:border-primary text-slate-200 text-sm outline-none transition-all"
+                  placeholder="admin@example.com"
                 />
+                <p className="text-xs text-slate-500 mt-2">
+                  CPU, 메모리, 디스크 임계값 초과 시 이 주소로 알림이 전송됩니다.
+                </p>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setEmailConfig({ ...emailConfig, useTls: !emailConfig.useTls })}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${emailConfig.useTls ? 'bg-primary neon-glow' : 'bg-slate-700'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${emailConfig.useTls ? 'translate-x-6' : ''}`} />
-                </button>
-                <span className="text-sm text-slate-300">STARTTLS 암호화 사용</span>
+
+              <div className="p-4 bg-white/[0.03] rounded-lg border border-white/5">
+                <p className="text-xs text-slate-500 mb-1 font-semibold uppercase tracking-wider">SMTP 서버 정보</p>
+                <p className="text-xs text-slate-400">SMTP 호스트, 포트, 인증 정보는 서버 <code className="bg-white/10 px-1 rounded">.env</code> 파일에서 관리됩니다.</p>
               </div>
-              <div className="flex items-center gap-4">
+
+              <div className="flex items-center gap-4 pt-2">
                 <button
                   onClick={handleTestEmail}
-                  disabled={testLoading}
+                  disabled={testLoading || !emailRecipient}
                   className="px-6 py-2.5 bg-primary/20 text-primary rounded-lg border border-primary/30 hover:bg-primary/30 transition-colors text-sm font-medium disabled:opacity-50"
                 >
                   {testLoading ? '전송 중...' : '테스트 이메일 발송'}

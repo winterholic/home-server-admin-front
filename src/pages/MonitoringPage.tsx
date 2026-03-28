@@ -27,6 +27,20 @@ function formatSpeed(bytesPerSec: number): string {
   return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
 }
 
+function formatChartTime(timestamp: string, period: Period): string {
+  const d = new Date(timestamp);
+  switch (period) {
+    case '1h':
+      return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    case '24h':
+      return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    case '7d':
+      return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}시`;
+    case '30d':
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+}
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -101,7 +115,7 @@ export default function MonitoringPage() {
 
   const chartData = history.map((d) => ({
     ...d,
-    time: new Date(d.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+    time: formatChartTime(d.timestamp, period),
     network_rx: d.network_rx / 1048576,
     network_tx: d.network_tx / 1048576,
   }));
@@ -140,6 +154,12 @@ export default function MonitoringPage() {
   const swapPercent = sys.memory.swap_total > 0
     ? (sys.memory.swap_used / sys.memory.swap_total) * 100
     : 0;
+
+  // XAxis tick interval based on period to avoid overcrowding
+  const xAxisInterval = period === '1h' ? 'preserveStartEnd'
+    : period === '24h' ? Math.max(1, Math.floor(chartData.length / 12))
+    : period === '7d' ? Math.max(1, Math.floor(chartData.length / 14))
+    : Math.max(1, Math.floor(chartData.length / 15));
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -211,7 +231,7 @@ export default function MonitoringPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke="rgba(255,255,255,0.03)" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} interval={xAxisInterval} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} width={30} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="cpu" name="CPU" stroke="#4B7CF3" fill="url(#cpuGrad)" strokeWidth={2} dot={false} />
@@ -267,7 +287,7 @@ export default function MonitoringPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke="rgba(255,255,255,0.03)" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} interval={xAxisInterval} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} width={30} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="memory" name="RAM" stroke="#4B7CF3" fill="url(#memGrad)" strokeWidth={2} dot={false} />
@@ -303,7 +323,7 @@ export default function MonitoringPage() {
           </div>
         </GlassCard>
 
-        {/* 디스크 상태 */}
+        {/* 디스크 상태 - 파티션별 */}
         <GlassCard className="overflow-hidden flex flex-col">
           <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
             <div className="flex items-center gap-3">
@@ -313,26 +333,42 @@ export default function MonitoringPage() {
             <span className="text-xs font-mono text-slate-400">{sys.disk.length}개 파티션</span>
           </div>
           <div className="p-5 flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sys.disk.map((d) => (
-              <div key={d.mountpoint} className="p-4 bg-white/[0.03] rounded-xl border border-white/5">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-medium text-sm">{d.mountpoint === '/' ? '시스템 루트 (/)' : `저장소 (${d.mountpoint})`}</h3>
-                    <p className="text-[10px] text-slate-400 font-mono">{d.device}</p>
+            {sys.disk.length === 0 ? (
+              <p className="text-slate-500 text-sm col-span-2 text-center py-6">디스크 정보 없음</p>
+            ) : (
+              sys.disk.map((d) => {
+                const label = d.mountpoint === '/'
+                  ? 'SSD (시스템 루트)'
+                  : d.total > 900 * 1024 ** 3
+                  ? `HDD (${d.mountpoint})`
+                  : `저장소 (${d.mountpoint})`;
+                const isWarning = d.percent >= 80;
+                return (
+                  <div key={d.mountpoint} className="p-4 bg-white/[0.03] rounded-xl border border-white/5">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-medium text-sm">{label}</h3>
+                        <p className="text-[10px] text-slate-400 font-mono">{d.device}</p>
+                      </div>
+                      <span className={`text-xs font-mono px-2 py-0.5 rounded ${isWarning ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'}`}>
+                        {isWarning ? '주의' : '정상'}
+                      </span>
+                    </div>
+                    <div className="flex items-end gap-3 mb-2">
+                      <span className="text-2xl font-bold">{formatBytes(d.used)}</span>
+                      <span className="text-xs text-slate-500 mb-1">/ {formatBytes(d.total)}</span>
+                    </div>
+                    <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${isWarning ? 'bg-red-500' : 'bg-primary'}`}
+                        style={{ width: `${d.percent}%` }}
+                      />
+                    </div>
+                    <p className="text-right text-xs text-slate-500 mt-1">{d.percent.toFixed(1)}% 사용</p>
                   </div>
-                  <span className={`text-xs font-mono px-2 py-0.5 rounded ${d.percent < 80 ? 'bg-primary/20 text-primary' : 'bg-warning/20 text-warning'}`}>
-                    {d.percent < 80 ? '정상' : '주의'}
-                  </span>
-                </div>
-                <div className="flex items-end gap-3 mb-2">
-                  <span className="text-2xl font-bold">{formatBytes(d.used)}</span>
-                  <span className="text-xs text-slate-500 mb-1">/ {formatBytes(d.total)}</span>
-                </div>
-                <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${d.percent}%` }} />
-                </div>
-              </div>
-            ))}
+                );
+              })
+            )}
           </div>
         </GlassCard>
 
@@ -350,7 +386,7 @@ export default function MonitoringPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid stroke="rgba(255,255,255,0.03)" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} interval={xAxisInterval} />
                   <YAxis tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} width={30} />
                   <Tooltip content={<CustomTooltip />} />
                   <Line type="monotone" dataKey="network_rx" name="Network RX" stroke="#4B7CF3" strokeWidth={2} dot={false} />

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, RefreshCw, Play, Square, RotateCw, FileText, Layers, CheckCircle, XCircle, PauseCircle, X } from 'lucide-react';
+import { Search, RefreshCw, Play, Square, RotateCw, FileText, Layers, CheckCircle, XCircle, PauseCircle, X, Box, Terminal, Settings2 } from 'lucide-react';
 import GlassCard from '../components/common/GlassCard';
 import StatusBadge from '../components/common/StatusBadge';
 import { fetchServices, controlService, fetchServiceLogs } from '../api/client';
@@ -9,6 +9,12 @@ function formatMemory(bytes: number): string {
   if (bytes === 0) return '0 MB';
   if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
   return (bytes / 1073741824).toFixed(1) + ' GB';
+}
+
+function ServiceTypeIcon({ type }: { type: ServiceInfo['type'] }) {
+  if (type === 'docker') return <Box className="w-5 h-5" />;
+  if (type === 'nohup') return <Terminal className="w-5 h-5" />;
+  return <Settings2 className="w-5 h-5" />;
 }
 
 interface LogsModal {
@@ -54,13 +60,13 @@ export default function ServicesPage() {
     }
   };
 
-  const handleViewLogs = async (svcName: string) => {
-    setLogsModal({ name: svcName, lines: [], loading: true });
+  const handleViewLogs = async (svc: ServiceInfo) => {
+    setLogsModal({ name: svc.name, lines: [], loading: true });
     try {
-      const resp = await fetchServiceLogs(svcName, 100);
-      setLogsModal({ name: svcName, lines: resp.lines, loading: false });
+      const resp = await fetchServiceLogs(svc.name, 100, svc.type);
+      setLogsModal({ name: svc.name, lines: resp.lines, loading: false });
     } catch (e) {
-      setLogsModal({ name: svcName, lines: ['로그를 불러오지 못했습니다'], loading: false });
+      setLogsModal({ name: svc.name, lines: ['로그를 불러오지 못했습니다'], loading: false });
     }
   };
 
@@ -212,7 +218,7 @@ export default function ServicesPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <div
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold border ${
+                            className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
                               svc.status === 'active'
                                 ? 'bg-primary/20 text-primary border-primary/30'
                                 : svc.status === 'failed'
@@ -220,7 +226,7 @@ export default function ServicesPage() {
                                   : 'bg-slate-700/20 text-slate-400 border-slate-700/30'
                             }`}
                           >
-                            {svc.name.charAt(0).toUpperCase()}
+                            <ServiceTypeIcon type={svc.type} />
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-white">
@@ -284,7 +290,7 @@ export default function ServicesPage() {
                                 <RotateCw className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => handleViewLogs(svc.name)}
+                                onClick={() => handleViewLogs(svc)}
                                 className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
                                 title="로그 보기"
                               >

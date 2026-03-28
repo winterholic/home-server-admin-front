@@ -117,6 +117,7 @@ export interface AppSettings {
   smtp_user: string;
   smtp_from: string;
   smtp_tls: boolean;
+  email_recipient: string;
   monitor_interval: number;
   data_retention_days: number;
   systemd_services: string[];
@@ -128,4 +129,18 @@ export interface DashboardData {
   services: ServiceSummary;
   recent_alerts: AlertHistory[];
   recent_logs: LogEntry[];
+}
+
+export interface AccessIpEntry {
+  ip: string;
+  count: number;
+  last_seen: string;
+  paths: string[];
+  status_codes: number[];
+  suspicious: boolean;
+}
+
+export interface AccessIpsResponse {
+  recent: AccessIpEntry[];
+  total_unique: number;
 }

@@ -561,13 +561,37 @@ WantedBy=multi-user.target
 
 ## 12. 향후 확장 가능성
 
-- Docker 컨테이너 모니터링
+- Docker 컨테이너 모니터링 ✅ (부분 구현 - 상태 및 로그)
 - 네트워크 트래픽 상세 분석
 - 백업 자동화 관리
 - 데이터베이스(MariaDB) 쿼리 모니터링
 - Redis 메트릭 수집
 - 모바일 앱 연동 (선택)
 - Webhook 알림 (Discord, Slack 등)
+- **IP 접속 현황 탭** (계획 중)
+
+---
+
+## 13. 변경 이력
+
+### 2026-03-28
+
+#### 버그 수정
+- 모니터링 X축 시간 포맷: 기간별 다른 포맷 적용 (`formatChartTime`) (`src/pages/MonitoringPage.tsx`)
+  - 1h/24h: `HH:MM` / 7d: `M/D HH시` / 30d: `M/D`
+- 디스크 중복 표시: 백엔드 수정으로 해결, 프론트엔드에서 파티션 레이블 개선 (`SSD`/`HDD` 자동 구분)
+- X축 틱 과밀 방지: `xAxisInterval`을 기간별로 자동 계산
+
+#### 기능 개선
+- 서비스 로그 조회: docker 컨테이너는 `service_type=docker` 파라미터로 요청 (`src/pages/ServicesPage.tsx`)
+- 이메일 설정 간소화: SMTP 전체 설정 제거 → 수신자 이메일만 설정 (`src/pages/SettingsPage.tsx`)
+  - `updateEmailRecipient()` API 함수 추가 (`src/api/client.ts`)
+  - `AppSettings.email_recipient` 타입 추가 (`src/types/index.ts`)
+
+#### 미완료 (다음 세션)
+- IP 접속 현황 탭 (백엔드 API 구현 후 연동)
+- 서비스 타입별 아이콘 UI (docker/systemd/nohup)
+- 대시보드 서비스 목록 에러 fallback 강화
 
 ---
 

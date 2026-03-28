@@ -10,6 +10,7 @@ import type {
   MonitoringHistory,
   AppSettings,
   DashboardData,
+  AccessIpsResponse,
 } from '../types';
 
 declare const __API_BASE_URL__: string;
@@ -59,10 +60,10 @@ export const controlService = (
     })
     .then((r) => r.data);
 
-export const fetchServiceLogs = (name: string, lines = 50) =>
+export const fetchServiceLogs = (name: string, lines = 50, service_type?: string) =>
   api
     .get<{ service_name: string; lines: string[] }>(`/services/${name}/logs`, {
-      params: { lines },
+      params: { lines, ...(service_type ? { service_type } : {}) },
     })
     .then((r) => r.data);
 
@@ -112,6 +113,9 @@ export const fetchAlertHistory = (limit = 50, offset = 0) =>
 export const fetchAppSettings = () =>
   api.get<AppSettings>('/settings').then((r) => r.data);
 
+export const updateEmailRecipient = (email_recipient: string) =>
+  api.put<AppSettings>('/settings/email-recipient', { email_recipient }).then((r) => r.data);
+
 export const updateSmtpSettings = (data: {
   smtp_host?: string;
   smtp_port?: number;
@@ -136,4 +140,9 @@ export const testSmtpConnection = (data: {
 }) =>
   api
     .post<{ success: boolean; message: string }>('/settings/smtp/test', data)
+    .then((r) => r.data);
+
+export const fetchAccessIps = (hours = 24, limit = 100) =>
+  api
+    .get<AccessIpsResponse>('/logs/access-ips', { params: { hours, limit } })
     .then((r) => r.data);
